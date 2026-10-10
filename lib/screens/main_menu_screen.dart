@@ -80,11 +80,17 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       ),
       _MenuEntry(
         number: 'III',
+        label: 'TABERNA & ENTRENAMIENTO',
+        subtitle: 'Minijuego de Bloques & 4 Poderes Rúnicos',
+        onTap: () => _open(const TetrisScreen()),
+      ),
+      _MenuEntry(
+        number: 'IV',
         label: 'AJUSTES',
         onTap: () => _open(const SettingsScreen()),
       ),
       _MenuEntry(
-        number: 'IV',
+        number: 'V',
         label: 'CRÉDITOS & OPEN SOURCE',
         onTap: () => _open(const CreditsScreen()),
       ),
@@ -288,146 +294,6 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     _footer(),
                   ],
                 ),
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.darkBackground,
-              AppTheme.backgroundColor,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.shield_outlined,
-                    size: 80,
-                    color: AppTheme.primaryColor,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    AppConstants.appName,
-                    style: const TextStyle(
-                      fontSize: 48,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 4,
-                      color: Colors.white,
-                      shadows: [
-                        Shadow(
-                          color: AppTheme.primaryColor,
-                          blurRadius: 20,
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Multiplatform Open Source Game',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppTheme.accentColor,
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 48),
-
-                  // Botón principal: JUGAR (Defensa de la Aldea y Roles de Héroes)
-                  _MenuButton(
-                    icon: Icons.shield_rounded,
-                    label: 'JUGAR',
-                    subtitle: 'Defensa de la Aldea (Mapa Gigante & Joystick)',
-                    isPrimary: true,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CharacterSelectScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Botón secundario: ARENA TÁCTICA
-                  _MenuButton(
-                    icon: Icons.grid_view_rounded,
-                    label: 'ARENA TÁCTICA',
-                    subtitle: 'Tablero Táctico 8x8 por Turnos',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const GameScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                                    const SizedBox(height: 16),
-
-                  // Tetris con poderes
-                  _MenuButton(
-                    icon: Icons.apps_rounded,
-                    label: 'TETRIS CON PODERES',
-                    subtitle: '20 niveles de velocidad & 4 poderes',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const TetrisScreen(),
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Ajustes
-                  _MenuButton(
-                    icon: Icons.settings_rounded,
-                    label: 'AJUSTES',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Créditos
-                  _MenuButton(
-                    icon: Icons.group_rounded,
-                    label: 'CRÉDITOS & OPEN SOURCE',
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CreditsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 32),
-                  const Text(
-                    'v${AppConstants.appVersion} • Controles Táctiles & Joystick Activos',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppTheme.accentColor,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
               ),
             ),
           ),

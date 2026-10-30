@@ -74,7 +74,7 @@ class WaveSystem {
       roster.insert(0, EnemyConfig.necromancerMiniboss);
     }
     if (wave == maxWaves) {
-      roster.insert(0, EnemyConfig.bossForBiome(biome.name, level));
+      roster.insert(0, EnemyConfig.finalDragon(level));
     }
     return roster;
   }

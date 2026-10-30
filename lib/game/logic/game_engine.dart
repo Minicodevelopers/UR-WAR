@@ -49,6 +49,12 @@ class GameEngine extends ChangeNotifier {
   Offset? get objectivePosition => map.biome == MapBiomeType.snow
       ? townHall.position + const Offset(360, -240)
       : null;
+  List<Offset> get dragonPerches => [
+    Offset(map.worldWidth / 2, 120),
+    Offset(map.worldWidth - 120, map.worldHeight / 2),
+    Offset(map.worldWidth / 2, map.worldHeight - 120),
+    Offset(120, map.worldHeight / 2),
+  ];
   bool get objectiveComplete =>
       objectivePosition == null || objectiveProgress >= 1;
   String get objectiveText {
@@ -75,6 +81,7 @@ class GameEngine extends ChangeNotifier {
 
   // Efectos temporales definitivos
   double freezeTimer = 0.0;
+  double playerFrozenTimer = 0.0;
   double villageShieldTimer = 0.0;
 
   // Seguimiento de cámara
@@ -501,6 +508,7 @@ class GameEngine extends ChangeNotifier {
       player.dashTimer = max(0, player.dashTimer - dt);
     }
     freezeTimer = max(0, freezeTimer - dt);
+    playerFrozenTimer = max(0, playerFrozenTimer - dt);
     villageShieldTimer = max(0, villageShieldTimer - dt);
     if (player.isMoving) player.walkPhase += dt * 10;
     if (!waveSystem.isWaveInProgress && completedWaves == 0) {
@@ -718,18 +726,12 @@ class GameEngine extends ChangeNotifier {
         isPaused ||
         dt <= 0 ||
         !dt.isFinite ||
-        player.dashTimer > 0) {
+        player.dashTimer > 0 ||
+        playerFrozenTimer > 0) {
+      player.isMoving = false;
       return;
     }
     var direction = inputDirection;
-    if (direction != Offset.zero) player.targetDestination = null;
-    if (direction == Offset.zero && player.targetDestination != null) {
-      direction = player.targetDestination! - player.position;
-      if (direction.distance < 8) {
-        player.targetDestination = null;
-        direction = Offset.zero;
-      }
-    }
     player.isMoving = direction.distance > 0;
     if (!player.isMoving) return;
     direction /= direction.distance;
@@ -762,7 +764,11 @@ class GameEngine extends ChangeNotifier {
   }
 
   bool dodge() {
-    if (isPaused || isVictory || isGameOver || player.dashCooldown > 0) {
+    if (isPaused ||
+        isVictory ||
+        isGameOver ||
+        player.dashCooldown > 0 ||
+        playerFrozenTimer > 0) {
       return false;
     }
     player.dashDirection = player.isMoving
@@ -771,7 +777,6 @@ class GameEngine extends ChangeNotifier {
     player.dashTimer = playerClass.type == PlayerRoleType.ranger ? 0.25 : 0.19;
     player.dashCooldown = playerClass.type == PlayerRoleType.ranger ? 2.0 : 3.0;
     player.isBlocking = false;
-    player.targetDestination = null;
     if (playerClass.type == PlayerRoleType.ranger) {
       hazards.add(
         HazardEntity(
@@ -857,20 +862,6 @@ class GameEngine extends ChangeNotifier {
       }
     }
     return pos;
-  }
-
-  void setTargetDestination(Offset worldPos) {
-    if (isGameOver || isVictory || isPaused) return;
-    const padding = 30.0;
-    final clampedX = worldPos.dx.clamp(padding, map.worldWidth - padding);
-    final clampedY = worldPos.dy.clamp(padding, map.worldHeight - padding);
-    player.targetDestination = Offset(clampedX, clampedY);
-    notifyListeners();
-  }
-
-  void clearTargetDestination() {
-    player.targetDestination = null;
-    notifyListeners();
   }
 
   /// Ejecución de ataque primario
@@ -1179,7 +1170,6 @@ class GameEngine extends ChangeNotifier {
     pendingBuildingType = type;
     _pendingBuildCost = price;
     buildPreviewPosition = null;
-    player.targetDestination = null;
     notifyListeners();
     return true;
   }
@@ -1346,6 +1336,8 @@ class GameEngine extends ChangeNotifier {
       showAnnouncement(
         config.ability == EnemyAbility.diamondResurrection
             ? '¡MINIJEFE: ${config.name}! Impide que complete su formación'
+            : config.ability == EnemyAbility.dragonArsenal
+            ? '¡JEFE FINAL: ${config.name}! Lee sus cuatro ataques y contraataca'
             : '¡JEFE: ${config.name}! Evita sus zonas de ataque',
         4.0,
       );
@@ -1461,13 +1453,30 @@ class GameEngine extends ChangeNotifier {
           if (h.type == 'trap') h.duration = 0;
         }
       } else {
-        if ((player.position - h.position).distance <= h.radius + 20) {
+        if (_hazardContains(h, player.position, 20)) {
+          final protected = player.dashTimer > 0 || player.shieldTimer > 0;
           _hurtPlayer(h.damage, h.position);
+          if (!protected && h.type == 'dragonIceBreath') {
+            playerFrozenTimer = 2.8;
+            player.isMoving = false;
+            floatingTexts.add(
+              FloatingTextEntity(
+                position: player.position - const Offset(0, 42),
+                text: '¡CONGELADO!',
+                color: const Color(0xFFBDEBFF),
+                fontSize: 15,
+              ),
+            );
+          }
+          if (!protected && h.type == 'dragonStomp') {
+            _knockPlayerAway(h.position, 155);
+          } else if (!protected && h.type == 'dragonTail') {
+            _knockPlayerAway(h.position, 95);
+          }
         }
         if (villageShieldTimer <= 0) {
           for (final b in villageBuildings) {
-            if (!b.isDead &&
-                (b.position - h.position).distance <= h.radius + b.radius) {
+            if (!b.isDead && _hazardContains(h, b.position, b.radius)) {
               _damageVillageBuilding(b, h.damage);
             }
           }
@@ -1477,11 +1486,44 @@ class GameEngine extends ChangeNotifier {
     hazards.removeWhere((h) => h.delay <= 0 && h.duration <= 0);
   }
 
+  bool _hazardContains(HazardEntity hazard, Offset target, double radius) {
+    final difference = target - hazard.position;
+    if (difference.distance > hazard.radius + radius) return false;
+    if (hazard.direction.distance < .01 || hazard.arcRadians >= 2 * pi) {
+      return true;
+    }
+    if (difference.distance < .01) return true;
+    final facing = hazard.direction / hazard.direction.distance;
+    final targetDirection = difference / difference.distance;
+    final dot = facing.dx * targetDirection.dx + facing.dy * targetDirection.dy;
+    return dot >= cos(hazard.arcRadians / 2);
+  }
+
+  void _knockPlayerAway(Offset origin, double distance) {
+    var direction = player.position - origin;
+    direction = direction.distance > .01
+        ? direction / direction.distance
+        : player.aimDirection;
+    var remaining = distance;
+    while (remaining > 0) {
+      final step = min(remaining, 18.0);
+      final next = _moveWithCollision(player.position, direction * step, 20);
+      if (next == player.position) break;
+      player.position = next;
+      remaining -= step;
+    }
+    _updateCamera();
+  }
+
   void _updateEnemies(double dt) {
     for (final enemy in List<EnemyEntity>.from(enemies)) {
       if (enemy.isDead) continue;
       _updateEnemyTimers(enemy, dt);
       if (enemy.emergenceTimer > 0) continue;
+      if (enemy.config.category == EnemyCategory.bossDragon &&
+          _updateDragonFlight(enemy, dt)) {
+        continue;
+      }
       if (_maintainGuardFormation(enemy, dt)) continue;
       _tryEnemyAbility(enemy, dt);
       final target =
@@ -1518,6 +1560,56 @@ class GameEngine extends ChangeNotifier {
     enemy.slowTimer = max(0, enemy.slowTimer - dt);
     enemy.emergenceTimer = max(0, enemy.emergenceTimer - dt);
     enemy.vulnerableTimer = max(0, enemy.vulnerableTimer - dt);
+  }
+
+  bool _updateDragonFlight(EnemyEntity dragon, double dt) {
+    final target = dragon.dragonFlightTarget;
+    if (target == null) return false;
+    if (dragon.dragonFlightDelay > 0) {
+      dragon.dragonFlightDelay = max(0, dragon.dragonFlightDelay - dt);
+      if (dragon.dragonFlightDelay == 0) {
+        showAnnouncement('¡${dragon.config.name} ALZA VUELO!', 1.8);
+        AudioEngine.playBossAbility();
+      }
+      return true;
+    }
+
+    final difference = target - dragon.position;
+    if (difference.distance <= 18) {
+      dragon.position = target;
+      dragon.dragonFlightTarget = null;
+      dragon.abilityTimer = .75;
+      _spawnExplosionParticles(
+        dragon.position,
+        dragon.config.healthBarColor,
+        18,
+      );
+      AudioEngine.playRockImpact();
+      showAnnouncement('¡EL DRAGÓN ATERRIZA Y PREPARA OTRO ATAQUE!', 1.8);
+      return true;
+    }
+
+    final direction = difference / difference.distance;
+    final speed = dragon.phase == 2 ? 760.0 : 650.0;
+    dragon.position += direction * min(difference.distance, speed * dt);
+    dragon.facingLeft = direction.dx < 0;
+    return true;
+  }
+
+  void _scheduleDragonFlight(EnemyEntity dragon) {
+    final indexedPerches =
+        dragonPerches.indexed
+            .where((entry) => entry.$1 != dragon.dragonPerchIndex)
+            .toList()
+          ..sort(
+            (a, b) => (b.$2 - player.position).distance.compareTo(
+              (a.$2 - player.position).distance,
+            ),
+          );
+    final destination = indexedPerches.first;
+    dragon.dragonPerchIndex = destination.$1;
+    dragon.dragonFlightTarget = destination.$2;
+    dragon.dragonFlightDelay = .9;
   }
 
   void _updateRollingRocks(double dt) {
@@ -1591,6 +1683,9 @@ class GameEngine extends ChangeNotifier {
       case EnemyAbility.lavaBurst:
         _tryElementalBossAbility(enemy, dt, frost: false);
         return;
+      case EnemyAbility.dragonArsenal:
+        _tryDragonArsenal(enemy, dt);
+        return;
     }
   }
 
@@ -1649,6 +1744,96 @@ class GameEngine extends ChangeNotifier {
     AudioEngine.playBossAbility();
     _openBossWeakPoint(enemy);
     _setBossCooldown(enemy);
+  }
+
+  void _tryDragonArsenal(EnemyEntity enemy, double dt) {
+    _updateBossPhase(enemy);
+    enemy.abilityTimer -= dt;
+    if (enemy.abilityTimer > 0) return;
+
+    var direction = player.position - enemy.position;
+    direction = direction.distance > 0
+        ? direction / direction.distance
+        : const Offset(1, 0);
+    enemy.facingLeft = direction.dx < 0;
+    enemy.abilityCastCount++;
+    final playerDistance = (player.position - enemy.position).distance;
+    final playerIsClose = playerDistance <= (enemy.phase == 2 ? 210 : 180);
+    final int attack;
+    if (playerIsClose) {
+      attack = enemy.dragonCloseAttackCount.isEven ? 1 : 3;
+      enemy.dragonCloseAttackCount++;
+    } else {
+      attack = enemy.dragonRangedAttackCount.isEven ? 0 : 2;
+      enemy.dragonRangedAttackCount++;
+    }
+    switch (attack) {
+      case 0:
+        showAnnouncement('¡OLA DE FUEGO! Rodea al dragón para evitarla', 2.4);
+        hazards.add(
+          HazardEntity(
+            position: enemy.position,
+            radius: max(enemy.phase == 2 ? 315.0 : 275.0, playerDistance + 70),
+            damage: enemy.attackDamage * 1.15,
+            color: const Color(0xFFFF5A1F),
+            delay: 1.15,
+            duration: .8,
+            type: 'dragonFireWave',
+            direction: direction,
+            arcRadians: pi,
+          ),
+        );
+        break;
+      case 1:
+        showAnnouncement('¡PISOTÓN SÍSMICO! Aléjate del dragón', 2.2);
+        hazards.add(
+          HazardEntity(
+            position: enemy.position,
+            radius: enemy.phase == 2 ? 175 : 145,
+            damage: enemy.attackDamage * 1.35,
+            color: const Color(0xFFD99A5B),
+            delay: .9,
+            duration: .7,
+            type: 'dragonStomp',
+          ),
+        );
+        break;
+      case 2:
+        showAnnouncement('¡ALIENTO DE HIELO! Evita el cono helado', 2.3);
+        hazards.add(
+          HazardEntity(
+            position: enemy.position,
+            radius: max(enemy.phase == 2 ? 290.0 : 250.0, playerDistance + 55),
+            damage: enemy.attackDamage * .7,
+            color: const Color(0xFF72DDF7),
+            delay: 1.05,
+            duration: .85,
+            type: 'dragonIceBreath',
+            direction: direction,
+            arcRadians: pi * .58,
+          ),
+        );
+        break;
+      default:
+        showAnnouncement('¡COLETAZO DEVASTADOR! Sal de su alcance', 2.1);
+        hazards.add(
+          HazardEntity(
+            position: enemy.position,
+            radius: enemy.phase == 2 ? 155 : 132,
+            damage: enemy.attackDamage * 2.15,
+            color: const Color(0xFFD1495B),
+            delay: .72,
+            duration: .55,
+            type: 'dragonTail',
+            direction: direction,
+            arcRadians: pi * .85,
+          ),
+        );
+    }
+    AudioEngine.playBossAbility();
+    _openBossWeakPoint(enemy);
+    _setBossCooldown(enemy);
+    _scheduleDragonFlight(enemy);
   }
 
   void _launchRollingRocks(EnemyEntity enemy) {
@@ -2197,6 +2382,17 @@ class GameEngine extends ChangeNotifier {
 
   void _damageEnemy(EnemyEntity enemy, double amount, {bool isCrit = false}) {
     if (enemy.isDead || enemy.rewardGranted || amount <= 0) return;
+    if (enemy.isFlying) {
+      floatingTexts.add(
+        FloatingTextEntity(
+          position: enemy.position - const Offset(0, 55),
+          text: '¡EVADIÓ EN VUELO!',
+          color: const Color(0xFFBDEBFF),
+          fontSize: 13,
+        ),
+      );
+      return;
+    }
     final effectiveAmount = amount * (enemy.vulnerableTimer > 0 ? 1.5 : 1);
     final previousHealth = enemy.health;
     enemy.takeDamage(effectiveAmount);

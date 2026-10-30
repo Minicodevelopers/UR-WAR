@@ -9,6 +9,7 @@ enum EnemyCategory {
   necromancer,
   necromancerMiniboss,
   bossTitan,
+  bossDragon,
 }
 
 /// High-level strategy used by the enemy AI controller.
@@ -22,6 +23,7 @@ enum EnemyAbility {
   titanArsenal,
   frostStorm,
   lavaBurst,
+  dragonArsenal,
 }
 
 /// Ordered preferences that future targeting rules can score independently.
@@ -265,6 +267,33 @@ class EnemyConfig {
       TargetPriority.defenses,
       TargetPriority.player,
       TargetPriority.townHall,
+    ],
+  );
+
+  static EnemyConfig finalDragon(int level) => EnemyConfig(
+    category: EnemyCategory.bossDragon,
+    name: 'VARYX, DRAGÓN DE LA RUINA',
+    maxHealth: 1250 + level * 180,
+    speed: 72,
+    attackDamage: 55 + level * 7,
+    attackRange: 82,
+    attackCooldownSeconds: 1.8,
+    goldReward: 350,
+    scoreReward: 900,
+    xpReward: 320,
+    isRanged: false,
+    isBoss: true,
+    hitRadius: 52,
+    sprite: PixelArtLibrary.magmaDragon,
+    healthBarColor: const Color(0xFFFF5A1F),
+    behavior: EnemyBehavior.miniboss,
+    preferredRange: 82,
+    abilityCooldownSeconds: 5.8,
+    ability: EnemyAbility.dragonArsenal,
+    targetPriorities: const [
+      TargetPriority.player,
+      TargetPriority.townHall,
+      TargetPriority.defenses,
     ],
   );
 

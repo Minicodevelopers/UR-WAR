@@ -15,6 +15,8 @@ void main() {
       EnemyAbility.diamondResurrection,
     );
     expect(EnemyConfig.bossTitan.behavior, EnemyBehavior.miniboss);
+    expect(EnemyConfig.finalDragon(1).ability, EnemyAbility.dragonArsenal);
+    expect(EnemyConfig.finalDragon(1).category, EnemyCategory.bossDragon);
   });
 
   test('ranged and support roles define future tactical ranges', () {

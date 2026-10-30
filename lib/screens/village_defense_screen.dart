@@ -82,7 +82,6 @@ class _VillageDefenseScreenState extends State<VillageDefenseScreen>
     _mouseHeld = false;
     _aimHeld = false;
     _inputGeneration++;
-    _engine.clearTargetDestination();
     _engine.setBlocking(false);
   }
 
@@ -442,9 +441,6 @@ class _VillageDefenseScreenState extends State<VillageDefenseScreen>
       _engine.setAimDirection(world - _engine.player.position);
       if (event.buttons & kPrimaryMouseButton != 0) _mouseHeld = true;
       if (event.buttons & kSecondaryMouseButton != 0) _engine.useSpecialSkill();
-    } else {
-      _mousePosition = null;
-      _engine.setTargetDestination(world);
     }
   }
 
@@ -625,7 +621,6 @@ class _VillageDefenseScreenState extends State<VillageDefenseScreen>
       onDirectionChanged: (direction) {
         _mousePosition = null;
         _moveDirection = direction;
-        if (direction != Offset.zero) _engine.clearTargetDestination();
       },
     );
     final aim = VirtualJoystick(

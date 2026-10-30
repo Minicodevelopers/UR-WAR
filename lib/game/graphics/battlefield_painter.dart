@@ -2,6 +2,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../logic/game_engine.dart';
+import '../models/enemy_type.dart';
 import '../models/entity.dart';
 import '../models/game_map.dart';
 import '../models/npc_model.dart';
@@ -48,7 +49,6 @@ class BattlefieldPainter extends CustomPainter {
     _paths(canvas);
     _hazards(canvas);
     _objective(canvas);
-    _destination(canvas);
     final objects = <(double, VoidCallback)>[];
     for (final o in engine.map.obstacles) {
       if (visible(o.position)) {
@@ -542,13 +542,47 @@ class BattlefieldPainter extends CustomPainter {
 
   void _enemy(Canvas canvas, EnemyEntity enemy) {
     final config = enemy.config;
-    final size = config.isBoss ? 3.8 : 2.6;
+    final size = config.category == EnemyCategory.bossDragon
+        ? 4.4
+        : config.isBoss
+        ? 3.8
+        : 2.6;
     final emerging = enemy.emergenceTimer > 0;
     final emergenceProgress = emerging
         ? (1 - enemy.emergenceTimer / 1.2).clamp(0.0, 1.0)
         : 1.0;
+    final flying = enemy.isFlying;
+    final flightHeight = flying ? 42 + sin(engine.elapsedTime * 8) * 6 : 0.0;
     final renderPosition =
-        enemy.position + Offset(0, (1 - emergenceProgress) * 28);
+        enemy.position + Offset(0, (1 - emergenceProgress) * 28 - flightHeight);
+    if (flying) {
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: enemy.position + const Offset(0, 18),
+          width: 76,
+          height: 24,
+        ),
+        Paint()..color = Colors.black.withValues(alpha: .32),
+      );
+      final wingLift = sin(engine.elapsedTime * 11) * 10;
+      final wingPaint = Paint()..color = const Color(0xFF9D2418);
+      canvas.drawPath(
+        Path()
+          ..moveTo(renderPosition.dx - 8, renderPosition.dy - 9)
+          ..lineTo(renderPosition.dx - 64, renderPosition.dy - 30 - wingLift)
+          ..lineTo(renderPosition.dx - 42, renderPosition.dy + 12)
+          ..close(),
+        wingPaint,
+      );
+      canvas.drawPath(
+        Path()
+          ..moveTo(renderPosition.dx + 8, renderPosition.dy - 9)
+          ..lineTo(renderPosition.dx + 64, renderPosition.dy - 30 - wingLift)
+          ..lineTo(renderPosition.dx + 42, renderPosition.dy + 12)
+          ..close(),
+        wingPaint,
+      );
+    }
     if (emerging) {
       canvas.drawOval(
         Rect.fromCenter(
@@ -596,7 +630,7 @@ class BattlefieldPainter extends CustomPainter {
           ..strokeWidth = 2,
       );
     }
-    if (enemy.vulnerableTimer > 0) {
+    if (enemy.vulnerableTimer > 0 && !flying) {
       final pulse = .65 + sin(engine.elapsedTime * 12) * .25;
       canvas.drawCircle(
         enemy.position,
@@ -617,7 +651,7 @@ class BattlefieldPainter extends CustomPainter {
     if (enemy.health < enemy.maxHealth || config.isBoss) {
       _health(
         canvas,
-        enemy.position - Offset(0, config.isBoss ? 65 : 39),
+        enemy.position - Offset(0, (config.isBoss ? 65 : 39) + flightHeight),
         config.isBoss ? 94 : 30,
         enemy.health,
         enemy.maxHealth,
@@ -627,8 +661,10 @@ class BattlefieldPainter extends CustomPainter {
     if (config.isBoss) {
       _label(
         canvas,
-        '${config.name} · FASE ${enemy.phase}',
-        enemy.position - const Offset(0, 81),
+        flying
+            ? '${config.name} · VOLANDO'
+            : '${config.name} · FASE ${enemy.phase}',
+        enemy.position - Offset(0, flying ? 125 : 81),
         const Color(0xFFFFD397),
         size: 10,
         maxWidth: 190,
@@ -689,9 +725,24 @@ class BattlefieldPainter extends CustomPainter {
       player.position,
       2.8,
       flip: player.aimDirection.dx < -.1,
-      tint: player.hitFlashTimer > 0 ? Colors.white : null,
+      tint: player.hitFlashTimer > 0
+          ? Colors.white
+          : engine.playerFrozenTimer > 0
+          ? const Color(0xFF9EE8FF)
+          : null,
       intensity: .75,
     );
+    if (engine.playerFrozenTimer > 0) {
+      final pulse = .55 + sin(engine.elapsedTime * 11) * .2;
+      canvas.drawCircle(
+        player.position,
+        30,
+        Paint()
+          ..color = const Color(0xFFBDEBFF).withValues(alpha: pulse)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 3,
+      );
+    }
     final aim = player.aimDirection;
     final angle = atan2(aim.dy, aim.dx);
     canvas.save();
@@ -923,24 +974,44 @@ class BattlefieldPainter extends CustomPainter {
       if (!view.inflate(h.radius).contains(h.position)) continue;
       final warning = h.isWarning;
       final pulse = .7 + sin(engine.elapsedTime * 9) * .15;
-      canvas.drawCircle(
-        h.position,
-        h.radius,
-        fillPaint..color = h.color.withValues(alpha: warning ? 0.13 : .22),
-      );
-      canvas.drawCircle(
-        h.position,
-        h.radius,
-        strokePaint
-          ..color = h.color.withValues(alpha: pulse)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = warning ? 2 : 4,
-      );
+      final directional = h.direction.distance > .01 && h.arcRadians < 2 * pi;
+      if (directional) {
+        final shape = _hazardSector(h);
+        canvas.drawPath(
+          shape,
+          fillPaint..color = h.color.withValues(alpha: warning ? .13 : .22),
+        );
+        canvas.drawPath(
+          shape,
+          strokePaint
+            ..color = h.color.withValues(alpha: pulse)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = warning ? 2 : 4,
+        );
+      } else {
+        canvas.drawCircle(
+          h.position,
+          h.radius,
+          fillPaint..color = h.color.withValues(alpha: warning ? 0.13 : .22),
+        );
+        canvas.drawCircle(
+          h.position,
+          h.radius,
+          strokePaint
+            ..color = h.color.withValues(alpha: pulse)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = warning ? 2 : 4,
+        );
+      }
       if (warning) {
+        final startAngle = directional
+            ? atan2(h.direction.dy, h.direction.dx) - h.arcRadians / 2
+            : -pi / 2;
+        final sweep = directional ? h.arcRadians : 2 * pi;
         canvas.drawArc(
           Rect.fromCircle(center: h.position, radius: h.radius),
-          -pi / 2,
-          2 * pi * h.warningProgress,
+          startAngle,
+          sweep * h.warningProgress,
           false,
           arcPaint
             ..color = h.color
@@ -968,6 +1039,19 @@ class BattlefieldPainter extends CustomPainter {
     }
   }
 
+  Path _hazardSector(HazardEntity hazard) {
+    final angle = atan2(hazard.direction.dy, hazard.direction.dx);
+    return Path()
+      ..moveTo(hazard.position.dx, hazard.position.dy)
+      ..arcTo(
+        Rect.fromCircle(center: hazard.position, radius: hazard.radius),
+        angle - hazard.arcRadians / 2,
+        hazard.arcRadians,
+        false,
+      )
+      ..close();
+  }
+
   void _drawHazardWarning(Canvas canvas, HazardEntity hazard) {
     final center = hazard.position;
     final progress = hazard.warningProgress;
@@ -977,6 +1061,7 @@ class BattlefieldPainter extends CustomPainter {
       ..strokeWidth = 3;
     switch (hazard.type) {
       case 'titanSlam':
+      case 'dragonStomp':
         for (var ray = 0; ray < 8; ray++) {
           final angle = ray * pi / 4 + progress * .35;
           final start = Offset(cos(angle), sin(angle)) * 13;
@@ -984,6 +1069,10 @@ class BattlefieldPainter extends CustomPainter {
           canvas.drawLine(center + start, center + end, paint);
         }
         _label(canvas, '⚡', center, hazard.color, size: 22);
+        break;
+      case 'dragonFireWave':
+        _drawConeRays(canvas, hazard, progress, 9, paint);
+        _label(canvas, '♨', center, hazard.color, size: 22);
         break;
       case 'iceStorm':
         for (var ray = 0; ray < 6; ray++) {
@@ -1000,6 +1089,29 @@ class BattlefieldPainter extends CustomPainter {
             center + end * .65,
             center + end * .48 - branch,
             paint,
+          );
+        }
+        break;
+      case 'dragonIceBreath':
+        _drawConeRays(canvas, hazard, progress, 7, paint);
+        for (var shard = 1; shard <= 3; shard++) {
+          final direction = hazard.direction / hazard.direction.distance;
+          canvas.drawCircle(
+            center + direction * hazard.radius * shard.toDouble() / 4.0,
+            4 + shard.toDouble(),
+            Paint()..color = const Color(0xFFBDEBFF),
+          );
+        }
+        break;
+      case 'dragonTail':
+        final angle = atan2(hazard.direction.dy, hazard.direction.dx);
+        for (var sweep = 1; sweep <= 3; sweep++) {
+          canvas.drawArc(
+            Rect.fromCircle(center: center, radius: hazard.radius * sweep / 3),
+            angle - hazard.arcRadians / 2,
+            hazard.arcRadians * progress,
+            false,
+            paint..strokeWidth = 3 + sweep.toDouble(),
           );
         }
         break;
@@ -1066,6 +1178,7 @@ class BattlefieldPainter extends CustomPainter {
       ..strokeWidth = 4;
     switch (hazard.type) {
       case 'titanSlam':
+      case 'dragonStomp':
         for (var ring = 1; ring <= 3; ring++) {
           canvas.drawCircle(
             center,
@@ -1073,6 +1186,9 @@ class BattlefieldPainter extends CustomPainter {
             paint..strokeWidth = 7 - ring.toDouble(),
           );
         }
+        break;
+      case 'dragonFireWave':
+        _drawConeRays(canvas, hazard, progress, 12, paint..strokeWidth = 7);
         break;
       case 'ice':
       case 'iceStorm':
@@ -1087,6 +1203,24 @@ class BattlefieldPainter extends CustomPainter {
             Paint()..color = hazard.color,
           );
         }
+        break;
+      case 'dragonIceBreath':
+        _drawConeRays(canvas, hazard, progress, 10, paint..strokeWidth = 4);
+        break;
+      case 'dragonTail':
+        final angle = atan2(hazard.direction.dy, hazard.direction.dx);
+        canvas.drawArc(
+          Rect.fromCircle(
+            center: center,
+            radius: hazard.radius * (.45 + progress * .55),
+          ),
+          angle - hazard.arcRadians / 2,
+          hazard.arcRadians,
+          false,
+          paint
+            ..strokeWidth = 13 * (1 - progress * .45)
+            ..strokeCap = StrokeCap.round,
+        );
         break;
       case 'meteor':
         canvas.drawCircle(
@@ -1130,6 +1264,25 @@ class BattlefieldPainter extends CustomPainter {
       default:
         canvas.drawCircle(center, hazard.radius * progress, paint);
         break;
+    }
+  }
+
+  void _drawConeRays(
+    Canvas canvas,
+    HazardEntity hazard,
+    double progress,
+    int count,
+    Paint paint,
+  ) {
+    final centerAngle = atan2(hazard.direction.dy, hazard.direction.dx);
+    for (var index = 0; index < count; index++) {
+      final ratio = count == 1 ? .5 : index / (count - 1);
+      final angle =
+          centerAngle - hazard.arcRadians / 2 + hazard.arcRadians * ratio;
+      final start = hazard.position + Offset(cos(angle), sin(angle)) * 18;
+      final length = hazard.radius * (.28 + progress * .68);
+      final end = hazard.position + Offset(cos(angle), sin(angle)) * length;
+      canvas.drawLine(start, end, paint);
     }
   }
 
@@ -1200,20 +1353,6 @@ class BattlefieldPainter extends CustomPainter {
       const Color(0xFFC6E6F3),
       size: 10,
     );
-  }
-
-  void _destination(Canvas canvas) {
-    final pos = engine.player.targetDestination;
-    if (pos == null) return;
-    canvas.drawCircle(
-      pos,
-      9 + sin(engine.elapsedTime * 5) * 2,
-      Paint()
-        ..color = const Color(0xFFEAD49A)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2,
-    );
-    canvas.drawCircle(pos, 3, Paint()..color = const Color(0xFFEAD49A));
   }
 
   void _placement(Canvas canvas) {

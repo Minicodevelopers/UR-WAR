@@ -57,8 +57,14 @@ class GameHUD extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'HÉROE · NIVEL ${player.level}',
-                                  style: _label,
+                                  engine.playerFrozenTimer > 0
+                                      ? 'HÉROE · CONGELADO'
+                                      : 'HÉROE · NIVEL ${player.level}',
+                                  style: engine.playerFrozenTimer > 0
+                                      ? _label.copyWith(
+                                          color: const Color(0xFFBDEBFF),
+                                        )
+                                      : _label,
                                 ),
                                 _bar(
                                   player.health / player.maxHealth,

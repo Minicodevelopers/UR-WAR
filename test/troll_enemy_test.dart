@@ -43,7 +43,7 @@ void main() {
       );
     });
 
-    test('does not replace the final biome boss', () {
+    test('does not replace the final dragon boss', () {
       final waves = WaveSystem(
         maxWaves: 5,
         biome: MapBiomeType.forest,
@@ -52,7 +52,7 @@ void main() {
 
       waves.startWave(5, 1000, 1000);
 
-      expect(waves.nextWaveSummary, contains('TITÁN DEL VALLE'));
+      expect(waves.nextWaveSummary, contains('VARYX, DRAGÓN DE LA RUINA'));
       expect(
         waves.nextWaveSummary,
         isNot(contains(EnemyConfig.necromancerMiniboss.name)),

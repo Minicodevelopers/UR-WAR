@@ -120,7 +120,8 @@ class EnemyTargetingPolicy {
         BuildingType.cannonTower => true,
         _ => false,
       },
-      TargetPriority.resources => type == BuildingType.goldMine,
+      TargetPriority.resources =>
+        type == BuildingType.goldMine || type == BuildingType.casino,
       _ => false,
     };
   }

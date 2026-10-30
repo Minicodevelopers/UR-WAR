@@ -342,6 +342,13 @@ class GameEngine extends ChangeNotifier {
             'Produce oro periódicamente. Constrúyela en una zona protegida para financiar nuevas defensas.',
         icon: Icons.monetization_on,
       ),
+      BuildingType.casino => const TutorialHint(
+        id: 'level1_item_casino',
+        title: 'CASINO',
+        message:
+            'Genera el 10% de tu oro disponible cada 5 segundos durante la oleada. Protégelo: los enemigos lo consideran un objetivo de recursos.',
+        icon: Icons.casino,
+      ),
       _ => const TutorialHint(
         id: 'level1_building',
         title: 'EDIFICIO DE LA ALDEA',
@@ -1560,6 +1567,7 @@ class GameEngine extends ChangeNotifier {
     enemy.slowTimer = max(0, enemy.slowTimer - dt);
     enemy.emergenceTimer = max(0, enemy.emergenceTimer - dt);
     enemy.vulnerableTimer = max(0, enemy.vulnerableTimer - dt);
+    enemy.dragonFlightCooldown = max(0, enemy.dragonFlightCooldown - dt);
   }
 
   bool _updateDragonFlight(EnemyEntity dragon, double dt) {
@@ -1578,6 +1586,7 @@ class GameEngine extends ChangeNotifier {
     if (difference.distance <= 18) {
       dragon.position = target;
       dragon.dragonFlightTarget = null;
+      dragon.dragonFlightCooldown = 30;
       dragon.abilityTimer = .75;
       _spawnExplosionParticles(
         dragon.position,
@@ -1833,7 +1842,10 @@ class GameEngine extends ChangeNotifier {
     AudioEngine.playBossAbility();
     _openBossWeakPoint(enemy);
     _setBossCooldown(enemy);
-    _scheduleDragonFlight(enemy);
+    if (enemy.dragonFlightCooldown <= 0) {
+      _scheduleDragonFlight(enemy);
+      enemy.dragonFlightCooldown = 30;
+    }
   }
 
   void _launchRollingRocks(EnemyEntity enemy) {
@@ -2273,17 +2285,26 @@ class GameEngine extends ChangeNotifier {
             );
           }
         }
-      } else if (b.type == BuildingType.goldMine &&
+      } else if ((b.type == BuildingType.goldMine ||
+              b.type == BuildingType.casino) &&
           waveSystem.isWaveInProgress) {
         b.goldGenerationTimer += dt;
-        if (b.goldGenerationTimer >= 10.0) {
-          b.goldGenerationTimer = 0.0;
-          player.gold += 15;
+        final interval = b.type == BuildingType.casino ? 5.0 : 10.0;
+        if (b.goldGenerationTimer >= interval) {
+          b.goldGenerationTimer -= interval;
+          final income = b.type == BuildingType.casino
+              ? max(1, (player.gold * 0.10).round())
+              : 15;
+          player.gold += income;
           floatingTexts.add(
             FloatingTextEntity(
               position: b.position - const Offset(0, 25),
-              text: '+15 🪙 (MINA)',
-              color: const Color(0xFFFFD166),
+              text: b.type == BuildingType.casino
+                  ? '+$income 🪙 (CASINO)'
+                  : '+15 🪙 (MINA)',
+              color: b.type == BuildingType.casino
+                  ? const Color(0xFFD89CFF)
+                  : const Color(0xFFFFD166),
               fontSize: 12,
             ),
           );

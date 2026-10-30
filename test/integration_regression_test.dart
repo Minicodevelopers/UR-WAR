@@ -188,7 +188,7 @@ void main() {
 
     engine.update(.05);
     expect(engine.hazards.last.type, 'dragonFireWave');
-    expect(engine.dragonPerches, contains(dragon.dragonFlightTarget));
+    expect(dragon.dragonFlightTarget, isNull);
 
     dragon.dragonFlightTarget = null;
     dragon.dragonFlightDelay = 0;
@@ -222,6 +222,7 @@ void main() {
             position: engine.player.position + const Offset(400, 0),
           )
           ..abilityTimer = 99
+          ..dragonFlightCooldown = 0
           ..dragonFlightTarget = engine.dragonPerches.first
           ..dragonFlightDelay = 0;
     engine.enemies.add(dragon);
@@ -532,6 +533,7 @@ void main() {
       BuildingType.cannonTower: 'level1_item_cannon',
       BuildingType.barricade: 'level1_item_barricade',
       BuildingType.goldMine: 'level1_item_gold_mine',
+      BuildingType.casino: 'level1_item_casino',
     };
 
     for (final entry in expected.entries) {
@@ -539,6 +541,38 @@ void main() {
       expect(engine.activeTutorialHint?.id, entry.value);
       engine.dismissTutorialHint();
     }
+  });
+
+  test('Casino generates 10 percent of available gold every 5 seconds', () {
+    engine.player.gold = 1000;
+    expect(
+      engine.buildStructure(
+        BuildingType.casino,
+        BuildingSpec.forType(BuildingType.casino).cost,
+      ),
+      isTrue,
+    );
+    engine.startNextWave();
+    // Evita que las torres iniciales eliminen enemigos y mezclen recompensas
+    // de combate con el ingreso que estamos verificando.
+    for (final building in engine.villageBuildings) {
+      if (building.type == BuildingType.watchtower) building.health = 0;
+    }
+    expect(engine.waveSystem.isWaveInProgress, isTrue);
+    final goldBeforeIncome = engine.player.gold;
+
+    for (var i = 0; i < 301; i++) {
+      engine.update(1 / 60);
+    }
+
+    expect(
+      engine.player.gold,
+      goldBeforeIncome + max(1, (goldBeforeIncome * 0.10).round()),
+    );
+    expect(
+      engine.floatingTexts.any((text) => text.text.contains('(CASINO)')),
+      isTrue,
+    );
   });
 
   test(

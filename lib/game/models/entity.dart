@@ -174,6 +174,9 @@ class EnemyEntity {
   int abilityCastCount = 0;
   Offset? dragonFlightTarget;
   double dragonFlightDelay = 0;
+
+  /// Time the dragon must remain grounded before changing perch again.
+  double dragonFlightCooldown = 30;
   int dragonPerchIndex = -1;
   int dragonCloseAttackCount = 0;
   int dragonRangedAttackCount = 0;
@@ -231,6 +234,7 @@ enum BuildingType {
   cottage,
   barricade,
   goldMine,
+  casino,
   frostTower,
   cannonTower,
 }
@@ -392,6 +396,7 @@ class BuildingSpec {
     ),
     BuildingType.barricade => const BuildingSpec('Barricada', 50, 650, 28),
     BuildingType.goldMine => const BuildingSpec('Mina de oro', 150, 350, 32),
+    BuildingType.casino => const BuildingSpec('Casino', 250, 450, 34),
     BuildingType.cottage => const BuildingSpec('Cabaña', 80, 350, 35),
   };
 }

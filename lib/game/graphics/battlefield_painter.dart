@@ -444,6 +444,7 @@ class BattlefieldPainter extends CustomPainter {
     BuildingType.cottage => PixelArtLibrary.cottage,
     BuildingType.barricade => PixelArtLibrary.stoneWall,
     BuildingType.goldMine => PixelArtLibrary.crystalMine,
+    BuildingType.casino => PixelArtLibrary.cottage,
     BuildingType.frostTower => PixelArtLibrary.thunderTower,
     BuildingType.cannonTower => PixelArtLibrary.watchtower,
   };
@@ -463,10 +464,13 @@ class BattlefieldPainter extends CustomPainter {
     }
     final frost = building.type == BuildingType.frostTower;
     final cannon = building.type == BuildingType.cannonTower;
+    final casino = building.type == BuildingType.casino;
     final color = frost
         ? const Color(0xFF99E3F5)
         : cannon
         ? const Color(0xFFEDA468)
+        : casino
+        ? const Color(0xFFD89CFF)
         : const Color(0xFFB9D990);
     _sprite(
       canvas,
@@ -479,6 +483,8 @@ class BattlefieldPainter extends CustomPainter {
           ? const Color(0xFF7BCFE7)
           : cannon
           ? const Color(0xFFEF9863)
+          : casino
+          ? const Color(0xFFB56BE8)
           : null,
       intensity: building.hitFlashTimer > 0 ? 0.75 : .35,
     );
@@ -498,6 +504,27 @@ class BattlefieldPainter extends CustomPainter {
         building.position + const Offset(15, -26),
         6,
         Paint()..color = Colors.black87,
+      );
+    }
+    if (casino) {
+      final wheelCenter = building.position + const Offset(0, -24);
+      canvas.drawCircle(
+        wheelCenter,
+        13,
+        Paint()..color = const Color(0xFF3B1D52),
+      );
+      canvas.drawCircle(
+        wheelCenter,
+        9,
+        Paint()
+          ..color = const Color(0xFFF4D58C)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2,
+      );
+      canvas.drawCircle(
+        wheelCenter,
+        3,
+        Paint()..color = const Color(0xFFE85D75),
       );
     }
     if (building.health < building.maxHealth || hall) {
@@ -535,6 +562,15 @@ class BattlefieldPainter extends CustomPainter {
         'CORAZÓN',
         building.position - const Offset(0, 68),
         const Color(0xFFDAEADA),
+        size: 9,
+      );
+    }
+    if (casino) {
+      _label(
+        canvas,
+        'CASINO',
+        building.position - const Offset(0, 68),
+        const Color(0xFFE7C8FF),
         size: 9,
       );
     }

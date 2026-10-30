@@ -156,6 +156,7 @@ class _VillageShopDialogState extends State<VillageShopDialog>
         BuildingType.cannonTower,
         BuildingType.barricade,
         BuildingType.goldMine,
+        BuildingType.casino,
       ])
         _item(
           BuildingSpec.forType(type).name,
@@ -307,6 +308,7 @@ class _VillageShopDialogState extends State<VillageShopDialog>
     BuildingType.frostTower => Icons.ac_unit,
     BuildingType.cannonTower => Icons.flare,
     BuildingType.barricade => Icons.fence,
+    BuildingType.casino => Icons.casino,
     _ => Icons.monetization_on,
   };
   static String _description(BuildingType type) => switch (type) {
@@ -318,6 +320,8 @@ class _VillageShopDialogState extends State<VillageShopDialog>
       'Disparos explosivos de área. Eficaz contra grupos, pero dispara lentamente.',
     BuildingType.barricade =>
       'Bloquea el paso y desvía enemigos. Colócala delante de tus torres, sin cerrar todos los caminos.',
+    BuildingType.casino =>
+      'Genera el 10% de tu oro disponible cada 5 segundos durante la oleada. Es rentable, pero atraerá a los enemigos.',
     _ =>
       'Produce oro periódicamente. Constrúyela lejos de los accesos y protégela de los saqueadores.',
   };

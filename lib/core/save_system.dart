@@ -80,8 +80,12 @@ class SaveData {
   };
 
   factory SaveData.fromJson(Map<String, dynamic> json) {
-    int integer(String k, [int fallback = 0]) =>
-        json[k] is num ? math.max(0, (json[k] as num).toInt()) : fallback;
+    int integer(String k, [int fallback = 0]) {
+      final value = json[k];
+      if (value is! num || !value.isFinite) return fallback;
+      return math.max(0, value.toInt());
+    }
+
     bool boolean(String k, bool fallback) =>
         json[k] is bool ? json[k] as bool : fallback;
     double decimal(String k, double fallback, double min, double max) {
@@ -94,7 +98,7 @@ class SaveData {
       if (v is! Map) return {};
       return {
         for (final e in v.entries)
-          if (e.key is String && e.value is num)
+          if (e.key is String && e.value is num && (e.value as num).isFinite)
             e.key as String: (e.value as num).toInt().clamp(0, max),
       };
     }

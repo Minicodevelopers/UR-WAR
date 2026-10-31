@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../core/audio_engine.dart';
+import 'achievements_screen.dart';
 import '../core/constants.dart';
 import '../core/save_system.dart';
 import 'character_select_screen.dart';
@@ -93,6 +94,12 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
         number: 'V',
         label: 'CRÉDITOS & OPEN SOURCE',
         onTap: () => _open(const CreditsScreen()),
+      ),
+      _MenuEntry(
+        number: 'VI',
+        label: 'LOGROS',
+        subtitle: 'Desafíos y recompensas del reino',
+        onTap: () => _open(const AchievementsScreen()),
       ),
     ],
   );

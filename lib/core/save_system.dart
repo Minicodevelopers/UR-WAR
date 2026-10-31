@@ -9,6 +9,7 @@ import 'audio_engine.dart';
 /// Versioned, local profile. A match is recorded once by the game engine.
 class SaveData {
   int highScore, totalKills, totalGoldGathered, unlockedCampaignLevel;
+  int dragonKills;
   bool soundEnabled,
       musicEnabled,
       autoAttack,
@@ -25,6 +26,7 @@ class SaveData {
     this.totalKills = 0,
     this.totalGoldGathered = 0,
     this.unlockedCampaignLevel = 1,
+    this.dragonKills = 0,
     this.soundEnabled = true,
     this.musicEnabled = true,
     this.soundVolume = .7,
@@ -63,6 +65,7 @@ class SaveData {
     'totalKills': totalKills,
     'totalGoldGathered': totalGoldGathered,
     'unlockedCampaignLevel': unlockedCampaignLevel,
+    'dragonKills': dragonKills,
     'soundEnabled': soundEnabled,
     'musicEnabled': musicEnabled,
     'soundVolume': soundVolume,
@@ -114,6 +117,7 @@ class SaveData {
       totalKills: integer('totalKills'),
       totalGoldGathered: integer('totalGoldGathered'),
       unlockedCampaignLevel: integer('unlockedCampaignLevel', 1).clamp(1, 5),
+      dragonKills: integer('dragonKills'),
       soundEnabled: boolean('soundEnabled', true),
       musicEnabled: boolean('musicEnabled', true),
       soundVolume: decimal('soundVolume', .7, 0, 1),
@@ -180,6 +184,11 @@ class SaveSystem {
     _data.totalKills += math.max(0, kills);
     _data.totalGoldGathered += math.max(0, gold);
     _data.highScore = math.max(score, _data.highScore);
+    save();
+  }
+
+  static void recordDragonDefeat() {
+    _data.dragonKills++;
     save();
   }
 

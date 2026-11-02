@@ -1,4 +1,4 @@
-﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:ur_war/core/save_system.dart';
 
 void main() {
@@ -7,6 +7,7 @@ void main() {
       final data = SaveData.fromJson({});
 
       expect(data.highScore, 0);
+      expect(data.dragonKills, 0);
       expect(data.unlockedCampaignLevel, 1);
       expect(data.soundEnabled, isTrue);
       expect(data.musicEnabled, isTrue);
@@ -43,6 +44,20 @@ void main() {
       expect(data.soundEnabled, isTrue);
       expect(data.levelStars, isEmpty);
       expect(data.tutorialHintsSeen, isEmpty);
+    });
+
+    test('loads the dragon defeat counter from the profile', () {
+      final data = SaveData.fromJson({'dragonKills': 3});
+
+      expect(data.dragonKills, 3);
+    });
+
+    test('saves and restores the dragon defeat counter', () {
+      final original = SaveData(dragonKills: 5);
+
+      final restored = SaveData.fromJson(original.toJson());
+
+      expect(restored.dragonKills, 5);
     });
   });
 }

@@ -2461,6 +2461,11 @@ class GameEngine extends ChangeNotifier {
         player.gold += enemy.config.goldReward;
         player.score += enemy.config.scoreReward;
         player.kills++;
+
+        if (enemy.config.category == EnemyCategory.bossDragon) {
+          SaveSystem.recordDragonDefeat();
+        }
+
         player.addXp(enemy.config.xpReward);
 
         // Pasiva del Mago Arcano: Sifón de Maná (recupera vida al matar)

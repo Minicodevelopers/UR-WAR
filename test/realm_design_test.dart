@@ -65,6 +65,8 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('REINICIAR'), findsOneWidget);
       expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('REINICIAR'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('REINICIAR'));
       await tester.pumpAndSettle();
       expect(game.isGameOver, isFalse);

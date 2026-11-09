@@ -59,5 +59,19 @@ void main() {
 
       expect(restored.dragonKills, 5);
     });
+
+    test('saves and restores Arena statistics', () {
+      final original = SaveData(
+        arenaMatchesPlayed: 10,
+        arenaVictories: 7,
+        arenaDefeats: 3,
+      );
+
+      final restored = SaveData.fromJson(original.toJson());
+
+      expect(restored.arenaMatchesPlayed, 10);
+      expect(restored.arenaVictories, 7);
+      expect(restored.arenaDefeats, 3);
+    });
   });
 }

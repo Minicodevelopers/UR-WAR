@@ -1,9 +1,10 @@
-
+﻿
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/theme.dart';
 import '../core/realm_widgets.dart';
+import '../core/save_system.dart';
 import '../providers/game_state.dart';
 import '../game/graphics/pixel_art_data.dart';
 import '../game/graphics/pixel_sprite_painter.dart';
@@ -375,6 +376,11 @@ class _ArenaResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final victory = game.winnerMessage.contains('VICTORIA');
+        final stats = SaveSystem.data;
+
+    final winRate = stats.arenaMatchesPlayed == 0
+        ? 0
+        : (stats.arenaVictories / stats.arenaMatchesPlayed * 100).round();
 
     final player = game.robots
         .where((robot) => robot.id.startsWith('p'))
@@ -470,6 +476,31 @@ class _ArenaResultScreen extends StatelessWidget {
                         ),
                         SizedBox(height: compact ? 6 : 16),
                         const Divider(color: Colors.white24),
+                        SizedBox(height: compact ? 4 : 10),
+                        _resultRow(
+                          Icons.sports_esports,
+                          'Partidas jugadas',
+                          '${stats.arenaMatchesPlayed}',
+                          compact: compact,
+                        ),
+                        _resultRow(
+                          Icons.emoji_events_outlined,
+                          'Victorias',
+                          '${stats.arenaVictories}',
+                          compact: compact,
+                        ),
+                        _resultRow(
+                          Icons.close,
+                          'Derrotas',
+                          '${stats.arenaDefeats}',
+                          compact: compact,
+                        ),
+                        _resultRow(
+                          Icons.percent,
+                          'Porcentaje de victorias',
+                          '$winRate%',
+                          compact: compact,
+                        ),
                         SizedBox(height: compact ? 8 : 18),
                         SizedBox(
                           width: double.infinity,

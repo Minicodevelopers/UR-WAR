@@ -10,6 +10,9 @@ import 'audio_engine.dart';
 class SaveData {
   int highScore, totalKills, totalGoldGathered, unlockedCampaignLevel;
   int dragonKills;
+  int arenaMatchesPlayed;
+  int arenaVictories;
+  int arenaDefeats;
   bool soundEnabled,
       musicEnabled,
       autoAttack,
@@ -37,6 +40,9 @@ class SaveData {
     this.leftHanded = false,
     this.tutorialSeen = false,
     this.tutorialHintsEnabled = true,
+    this.arenaMatchesPlayed = 0,
+    this.arenaVictories = 0,
+    this.arenaDefeats = 0,
     Map<String, int>? levelStars,
     Map<String, int>? levelScores,
     Map<String, int>? keyBindings,
@@ -66,6 +72,9 @@ class SaveData {
     'totalGoldGathered': totalGoldGathered,
     'unlockedCampaignLevel': unlockedCampaignLevel,
     'dragonKills': dragonKills,
+    'arenaMatchesPlayed': arenaMatchesPlayed,
+    'arenaVictories': arenaVictories,
+    'arenaDefeats': arenaDefeats,
     'soundEnabled': soundEnabled,
     'musicEnabled': musicEnabled,
     'soundVolume': soundVolume,
@@ -118,6 +127,10 @@ class SaveData {
       totalGoldGathered: integer('totalGoldGathered'),
       unlockedCampaignLevel: integer('unlockedCampaignLevel', 1).clamp(1, 5),
       dragonKills: integer('dragonKills'),
+
+      arenaMatchesPlayed: integer('arenaMatchesPlayed'),
+      arenaVictories: integer('arenaVictories'),
+      arenaDefeats: integer('arenaDefeats'),
       soundEnabled: boolean('soundEnabled', true),
       musicEnabled: boolean('musicEnabled', true),
       soundVolume: decimal('soundVolume', .7, 0, 1),
@@ -184,6 +197,18 @@ class SaveSystem {
     _data.totalKills += math.max(0, kills);
     _data.totalGoldGathered += math.max(0, gold);
     _data.highScore = math.max(score, _data.highScore);
+    save();
+  }
+
+  static void recordArenaMatch({required bool victory}) {
+    _data.arenaMatchesPlayed++;
+
+    if (victory) {
+      _data.arenaVictories++;
+    } else {
+      _data.arenaDefeats++;
+    }
+
     save();
   }
 

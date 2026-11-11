@@ -1,3 +1,4 @@
+import '../core/save_system.dart';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/robot.dart';
@@ -9,6 +10,7 @@ class GameState extends ChangeNotifier {
   String? selectedRobotId;
   String? logs;
   bool isGameOver = false;
+  bool _matchRecorded = false;
   String winnerMessage = '';
 
   GameState() {
@@ -82,6 +84,7 @@ class GameState extends ChangeNotifier {
     selectedRobotId = null;
     isGameOver = false;
     winnerMessage = '';
+    _matchRecorded = false;
     logs =
         '¡Bienvenido a la Arena Táctica por Turnos! Selecciona a tu guardián de acero para moverte o atacar.';
     notifyListeners();
@@ -89,6 +92,13 @@ class GameState extends ChangeNotifier {
 
   void resetGame() {
     _initializeGame();
+  }
+
+  void _recordMatch({required bool victory}) {
+    if (_matchRecorded) return;
+
+    _matchRecorded = true;
+    SaveSystem.recordArenaMatch(victory: victory);
   }
 
   void onCellTapped(int x, int y) {
@@ -146,6 +156,7 @@ class GameState extends ChangeNotifier {
             logs = '¡${robotAtCell.name} ha sido destruido! ¡VICTORIA!';
             isGameOver = true;
             winnerMessage = '¡VICTORIA DEL JUGADOR!';
+            _recordMatch(victory: true);
           }
 
           if (selectedRobot.actionPoints <= 0) {
@@ -212,6 +223,7 @@ class GameState extends ChangeNotifier {
         if (player.hp <= 0) {
           isGameOver = true;
           winnerMessage = '¡DERROTA! Tu guardián de acero ha sido destruido.';
+          _recordMatch(victory: false);
           break;
         }
       } else {

@@ -1,4 +1,3 @@
-﻿
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -63,7 +62,10 @@ class GameScreen extends StatelessWidget {
                               Expanded(child: board),
                               Padding(
                                 padding: const EdgeInsets.fromLTRB(
-                                  16, 8, 16, 16,
+                                  16,
+                                  8,
+                                  16,
+                                  16,
                                 ),
                                 child: controls,
                               ),
@@ -77,217 +79,213 @@ class GameScreen extends StatelessWidget {
   }
 
   Widget _board(GameState game) => LayoutBuilder(
-        builder: (context, box) {
-          final side = math.min(box.maxWidth, box.maxHeight) - 24;
+    builder: (context, box) {
+      final side = math.min(box.maxWidth, box.maxHeight) - 24;
 
-          return Center(
-            child: SizedBox(
-              width: side,
-              height: side,
-              child: GestureDetector(
-                onPanEnd: (details) {
-                  final v = details.velocity.pixelsPerSecond;
+      return Center(
+        child: SizedBox(
+          width: side,
+          height: side,
+          child: GestureDetector(
+            onPanEnd: (details) {
+              final v = details.velocity.pixelsPerSecond;
 
-                  if (v.dx.abs() > v.dy.abs()) {
-                    if (v.dx.abs() > 80) {
-                      game.moveInDirection(v.dx > 0 ? 1 : -1, 0);
-                    }
-                  } else if (v.dy.abs() > 80) {
-                    game.moveInDirection(0, v.dy > 0 ? 1 : -1);
-                  }
-                },
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF222720),
-                    border: Border.all(
-                      color: AppTheme.primaryColor,
-                      width: 2,
-                    ),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black54,
-                        blurRadius: 20,
-                      ),
-                    ],
-                  ),
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: EdgeInsets.zero,
-                    itemCount: 64,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 8,
-                    ),
-                    itemBuilder: (context, index) {
-                      final x = index % 8;
-                      final y = index ~/ 8;
+              if (v.dx.abs() > v.dy.abs()) {
+                if (v.dx.abs() > 80) {
+                  game.moveInDirection(v.dx > 0 ? 1 : -1, 0);
+                }
+              } else if (v.dy.abs() > 80) {
+                game.moveInDirection(0, v.dy > 0 ? 1 : -1);
+              }
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF222720),
+                border: Border.all(color: AppTheme.primaryColor, width: 2),
+                boxShadow: const [
+                  BoxShadow(color: Colors.black54, blurRadius: 20),
+                ],
+              ),
+              child: GridView.builder(
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.zero,
+                itemCount: 64,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 8,
+                ),
+                itemBuilder: (context, index) {
+                  final x = index % 8;
+                  final y = index ~/ 8;
 
-                      final robot = game.robots
-                          .where(
-                            (r) => r.x == x && r.y == y && r.hp > 0,
-                          )
-                          .firstOrNull;
+                  final robot = game.robots
+                      .where((r) => r.x == x && r.y == y && r.hp > 0)
+                      .firstOrNull;
 
-                      final friendly =
-                          robot?.id.startsWith('p') ?? false;
+                  final friendly = robot?.id.startsWith('p') ?? false;
 
-                      final selected = robot != null &&
-                          robot.id == game.selectedRobotId;
+                  final selected =
+                      robot != null && robot.id == game.selectedRobotId;
 
-                      final moveTarget = game.canMoveTo(x, y);
-                      final attackTarget = game.canAttackAt(x, y);
+                  final moveTarget = game.canMoveTo(x, y);
+                  final attackTarget = game.canAttackAt(x, y);
 
-                      final targetColor = moveTarget
-                          ? const Color(0xFF94A480)
-                          : const Color(0xFFB36B57);
+                  final targetColor = moveTarget
+                      ? const Color(0xFF94A480)
+                      : const Color(0xFFB36B57);
 
-                      return Semantics(
-                        button: true,
-                        label:
-                            'Casilla ${x + 1}, ${y + 1}'
-                            '${robot == null ? '' : friendly ? ', aliado' : ', enemigo'}'
-                            '${moveTarget ? ', movimiento disponible' : ''}'
-                            '${attackTarget ? ', objetivo de ataque' : ''}',
-                        child: InkWell(
-                          onTap: () => game.onCellTapped(x, y),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 180),
-                            decoration: BoxDecoration(
-                              color: selected
-                                  ? const Color(0xFF625539)
-                                  : moveTarget
-                                      ? const Color(0xFF344638)
-                                      : attackTarget
-                                          ? const Color(0xFF513630)
-                                          : (x + y) % 2 == 0
-                                              ? const Color(0xFF363D30)
-                                              : const Color(0xFF252B25),
-                              border: Border.all(
-                                color: selected
-                                    ? AppTheme.primaryColor
-                                    : moveTarget || attackTarget
-                                        ? targetColor
-                                        : const Color(0xFF454737),
-                                width: moveTarget || attackTarget ? 2 : .7,
-                              ),
-                            ),
-                            child: robot == null
-                                ? null
-                                : LayoutBuilder(
-                                    builder: (context, cell) => Stack(
-                                      children: [
-                                        Positioned.fill(
-                                          bottom: 6,
-                                          child: FittedBox(
-                                            child: PixelSpriteWidget(
-                                              sprite: friendly
-                                                  ? PixelArtLibrary.knightIdle
-                                                  : PixelArtLibrary.bossTitan,
-                                              pixelSize: 4,
-                                            ),
-                                          ),
-                                        ),
-                                        Positioned(
-                                          left: 3,
-                                          right: 3,
-                                          bottom: 2,
-                                          child: LinearProgressIndicator(
-                                            value: (robot.hp / robot.maxHp)
-                                                .clamp(0, 1),
-                                            minHeight: 3,
-                                            color: friendly
-                                                ? const Color(0xFF94A480)
-                                                : const Color(0xFFB36B57),
-                                            backgroundColor: Colors.black54,
-                                          ),
-                                        ),
-                                        if (friendly && cell.maxWidth >= 36)
-                                          Positioned(
-                                            top: 1,
-                                            right: 2,
-                                            child: Text(
-                                              '${robot.actionPoints}',
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                                color: AppTheme.accentColor,
-                                              ),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
+                  return Semantics(
+                    button: true,
+                    label:
+                        'Casilla ${x + 1}, ${y + 1}'
+                        '${robot == null
+                            ? ''
+                            : friendly
+                            ? ', aliado'
+                            : ', enemigo'}'
+                        '${moveTarget ? ', movimiento disponible' : ''}'
+                        '${attackTarget ? ', objetivo de ataque' : ''}',
+                    child: InkWell(
+                      onTap: () => game.onCellTapped(x, y),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? const Color(0xFF625539)
+                              : moveTarget
+                              ? const Color(0xFF344638)
+                              : attackTarget
+                              ? const Color(0xFF513630)
+                              : (x + y) % 2 == 0
+                              ? const Color(0xFF363D30)
+                              : const Color(0xFF252B25),
+                          border: Border.all(
+                            color: selected
+                                ? AppTheme.primaryColor
+                                : moveTarget || attackTarget
+                                ? targetColor
+                                : const Color(0xFF454737),
+                            width: moveTarget || attackTarget ? 2 : .7,
                           ),
                         ),
-                      );
-                    },
-                  ),
-                ),
+                        child: robot == null
+                            ? null
+                            : LayoutBuilder(
+                                builder: (context, cell) => Stack(
+                                  children: [
+                                    Positioned.fill(
+                                      bottom: 6,
+                                      child: FittedBox(
+                                        child: PixelSpriteWidget(
+                                          sprite: friendly
+                                              ? PixelArtLibrary.knightIdle
+                                              : PixelArtLibrary.bossTitan,
+                                          pixelSize: 4,
+                                        ),
+                                      ),
+                                    ),
+                                    Positioned(
+                                      left: 3,
+                                      right: 3,
+                                      bottom: 2,
+                                      child: LinearProgressIndicator(
+                                        value: (robot.hp / robot.maxHp).clamp(
+                                          0,
+                                          1,
+                                        ),
+                                        minHeight: 3,
+                                        color: friendly
+                                            ? const Color(0xFF94A480)
+                                            : const Color(0xFFB36B57),
+                                        backgroundColor: Colors.black54,
+                                      ),
+                                    ),
+                                    if (friendly && cell.maxWidth >= 36)
+                                      Positioned(
+                                        top: 1,
+                                        right: 2,
+                                        child: Text(
+                                          '${robot.actionPoints}',
+                                          style: const TextStyle(
+                                            fontSize: 10,
+                                            color: AppTheme.accentColor,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
-          );
-        },
+          ),
+        ),
       );
+    },
+  );
 
   Widget _controls(GameState game) => Column(
-        mainAxisSize: MainAxisSize.min,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      const Text(
+        'EL TABLERO DE GUERRA',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontFamily: 'Cinzel',
+          fontSize: 16,
+          color: AppTheme.accentColor,
+        ),
+      ),
+      const SizedBox(height: 8),
+      _actionPointsPanel(game),
+      const SizedBox(height: 8),
+      const _BoardLegend(),
+      const SizedBox(height: 8),
+      Text(
+        game.logs ??
+            'Selecciona a tu guardián. Mueve, ataca y administra tus acciones.',
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: AppTheme.muted,
+          fontSize: 12,
+          height: 1.4,
+        ),
+      ),
+      const SizedBox(height: 10),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'EL TABLERO DE GUERRA',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: 'Cinzel',
-              fontSize: 16,
-              color: AppTheme.accentColor,
-            ),
+          _direction(
+            Icons.arrow_left_rounded,
+            () => game.moveInDirection(-1, 0),
           ),
-          const SizedBox(height: 8),
-          _actionPointsPanel(game),
-          const SizedBox(height: 8),
-          const _BoardLegend(),
-          const SizedBox(height: 8),
-          Text(
-            game.logs ??
-                'Selecciona a tu guardián. Mueve, ataca y administra tus acciones.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppTheme.muted,
-              fontSize: 12,
-              height: 1.4,
-            ),
+          _direction(
+            Icons.arrow_drop_up_rounded,
+            () => game.moveInDirection(0, -1),
           ),
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _direction(
-                Icons.arrow_left_rounded,
-                () => game.moveInDirection(-1, 0),
-              ),
-              _direction(
-                Icons.arrow_drop_up_rounded,
-                () => game.moveInDirection(0, -1),
-              ),
-              _direction(
-                Icons.arrow_drop_down_rounded,
-                () => game.moveInDirection(0, 1),
-              ),
-              _direction(
-                Icons.arrow_right_rounded,
-                () => game.moveInDirection(1, 0),
-              ),
-            ],
+          _direction(
+            Icons.arrow_drop_down_rounded,
+            () => game.moveInDirection(0, 1),
           ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: game.endTurn,
-              icon: const Icon(Icons.skip_next),
-              label: const Text('PASAR TURNO'),
-            ),
+          _direction(
+            Icons.arrow_right_rounded,
+            () => game.moveInDirection(1, 0),
           ),
         ],
-      );
+      ),
+      const SizedBox(height: 10),
+      SizedBox(
+        width: double.infinity,
+        child: ElevatedButton.icon(
+          onPressed: game.endTurn,
+          icon: const Icon(Icons.skip_next),
+          label: const Text('PASAR TURNO'),
+        ),
+      ),
+    ],
+  );
 
   Widget _actionPointsPanel(GameState game) {
     final robot = game.activePlayerRobot;
@@ -298,9 +296,7 @@ class GameScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: .3),
-        border: Border.all(
-          color: AppTheme.primaryColor.withValues(alpha: .6),
-        ),
+        border: Border.all(color: AppTheme.primaryColor.withValues(alpha: .6)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -321,10 +317,7 @@ class GameScreen extends StatelessWidget {
                 ),
                 Text(
                   'Puntos de acción: ${robot.actionPoints}',
-                  style: const TextStyle(
-                    color: AppTheme.muted,
-                    fontSize: 12,
-                  ),
+                  style: const TextStyle(color: AppTheme.muted, fontSize: 12),
                 ),
               ],
             ),
@@ -355,12 +348,8 @@ class GameScreen extends StatelessWidget {
   }
 
   Widget _direction(IconData icon, VoidCallback action) =>
-      IconButton.filledTonal(
-        onPressed: action,
-        icon: Icon(icon, size: 26),
-      );
+      IconButton.filledTonal(onPressed: action, icon: Icon(icon, size: 26));
 }
-
 
 class _ArenaResultScreen extends StatelessWidget {
   const _ArenaResultScreen({
@@ -376,7 +365,7 @@ class _ArenaResultScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final victory = game.winnerMessage.contains('VICTORIA');
-        final stats = SaveSystem.data;
+    final stats = SaveSystem.data;
 
     final winRate = stats.arenaMatchesPlayed == 0
         ? 0
@@ -409,25 +398,17 @@ class _ArenaResultScreen extends StatelessWidget {
                     padding: EdgeInsets.all(compact ? 12 : 24),
                     decoration: BoxDecoration(
                       color: const Color(0xFF171D19),
-                      border: Border.all(
-                        color: resultColor,
-                        width: 2,
-                      ),
+                      border: Border.all(color: resultColor, width: 2),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black54,
-                          blurRadius: 24,
-                        ),
+                        BoxShadow(color: Colors.black54, blurRadius: 24),
                       ],
                     ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          victory
-                              ? Icons.emoji_events
-                              : Icons.shield_outlined,
+                          victory ? Icons.emoji_events : Icons.shield_outlined,
                           color: resultColor,
                           size: compact ? 42 : 76,
                         ),
@@ -501,6 +482,87 @@ class _ArenaResultScreen extends StatelessWidget {
                           '$winRate%',
                           compact: compact,
                         ),
+                        _resultRow(
+                          Icons.local_fire_department,
+                          'Racha actual',
+                          '${stats.arenaCurrentWinStreak} victorias',
+                          compact: compact,
+                        ),
+                        _resultRow(
+                          Icons.military_tech,
+                          'Mejor racha',
+                          '${stats.arenaBestWinStreak} victorias',
+                          compact: compact,
+                        ),
+                        if (stats.arenaMatchHistory.isNotEmpty) ...[
+                          SizedBox(height: compact ? 8 : 12),
+                          Text(
+                            'ÚLTIMAS 5 PARTIDAS',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontWeight: FontWeight.bold,
+                              fontSize: compact ? 11 : 13,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              for (final result in stats.arenaMatchHistory)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 5,
+                                  ),
+                                  child: Icon(
+                                    result == 'victoria'
+                                        ? Icons.check_circle
+                                        : Icons.cancel,
+                                    color: result == 'victoria'
+                                        ? Colors.greenAccent
+                                        : Colors.redAccent,
+                                    size: compact ? 22 : 26,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                        if (stats.arenaCurrentWinStreak > 0 &&
+                            stats.arenaCurrentWinStreak ==
+                                stats.arenaBestWinStreak)
+                          Padding(
+                            padding: EdgeInsets.only(top: compact ? 4 : 8),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.emoji_events,
+                                  color: AppTheme.accentColor,
+                                  size: compact ? 18 : 22,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '¡NUEVO RÉCORD!',
+                                  style: TextStyle(
+                                    color: AppTheme.accentColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: compact ? 13 : 15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        SizedBox(height: compact ? 6 : 12),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: LinearProgressIndicator(
+                            value: winRate / 100,
+                            minHeight: compact ? 8 : 12,
+                            backgroundColor: Colors.white12,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              resultColor,
+                            ),
+                          ),
+                        ),
                         SizedBox(height: compact ? 8 : 18),
                         SizedBox(
                           width: double.infinity,
@@ -557,11 +619,7 @@ class _ArenaResultScreen extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: compact ? 3 : 8),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: AppTheme.accentColor,
-            size: compact ? 17 : 20,
-          ),
+          Icon(icon, color: AppTheme.accentColor, size: compact ? 17 : 20),
           SizedBox(width: compact ? 8 : 12),
           Expanded(
             child: Text(
@@ -586,50 +644,37 @@ class _ArenaResultScreen extends StatelessWidget {
   }
 }
 
-
 class _BoardLegend extends StatelessWidget {
   const _BoardLegend();
 
   @override
   Widget build(BuildContext context) => Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 14,
-        children: const [
-          _LegendItem(color: Color(0xFF94A480), label: 'Mover'),
-          _LegendItem(color: Color(0xFFB36B57), label: 'Atacar'),
-        ],
-      );
+    alignment: WrapAlignment.center,
+    spacing: 14,
+    children: const [
+      _LegendItem(color: Color(0xFF94A480), label: 'Mover'),
+      _LegendItem(color: Color(0xFFB36B57), label: 'Atacar'),
+    ],
+  );
 }
 
 class _LegendItem extends StatelessWidget {
-  const _LegendItem({
-    required this.color,
-    required this.label,
-  });
+  const _LegendItem({required this.color, required this.label});
 
   final Color color;
   final String label;
 
   @override
   Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppTheme.muted,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      );
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: 10,
+        height: 10,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      ),
+      const SizedBox(width: 5),
+      Text(label, style: const TextStyle(color: AppTheme.muted, fontSize: 11)),
+    ],
+  );
 }

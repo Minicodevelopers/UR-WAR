@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ur_war/core/save_system.dart';
 
 void main() {
@@ -72,6 +73,58 @@ void main() {
       expect(restored.arenaMatchesPlayed, 10);
       expect(restored.arenaVictories, 7);
       expect(restored.arenaDefeats, 3);
+    });
+
+    test('uses safe defaults for Arena win streaks', () {
+      final data = SaveData.fromJson({});
+
+      expect(data.arenaCurrentWinStreak, 0);
+      expect(data.arenaBestWinStreak, 0);
+    });
+
+    test('saves and restores Arena win streaks', () {
+      final original = SaveData(
+        arenaMatchesPlayed: 12,
+        arenaVictories: 9,
+        arenaDefeats: 3,
+        arenaCurrentWinStreak: 4,
+        arenaBestWinStreak: 6,
+      );
+
+      final restored = SaveData.fromJson(original.toJson());
+
+      expect(restored.arenaMatchesPlayed, 12);
+      expect(restored.arenaVictories, 9);
+      expect(restored.arenaDefeats, 3);
+      expect(restored.arenaCurrentWinStreak, 4);
+      expect(restored.arenaBestWinStreak, 6);
+    });
+  });
+  group('SaveSystem.recordArenaMatch', () {
+    setUp(() async {
+      SharedPreferences.setMockInitialValues({});
+      await SaveSystem.initialize();
+    });
+
+    test('increments win streak after victories', () async {
+      SaveSystem.recordArenaMatch(victory: true);
+      SaveSystem.recordArenaMatch(victory: true);
+
+      await SaveSystem.flush();
+
+      expect(SaveSystem.data.arenaCurrentWinStreak, 2);
+      expect(SaveSystem.data.arenaBestWinStreak, 2);
+    });
+
+    test('resets current streak after defeat', () async {
+      SaveSystem.recordArenaMatch(victory: true);
+      SaveSystem.recordArenaMatch(victory: true);
+      SaveSystem.recordArenaMatch(victory: false);
+
+      await SaveSystem.flush();
+
+      expect(SaveSystem.data.arenaCurrentWinStreak, 0);
+      expect(SaveSystem.data.arenaBestWinStreak, 2);
     });
   });
 }

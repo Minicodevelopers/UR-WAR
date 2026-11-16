@@ -13,6 +13,9 @@ class SaveData {
   int arenaMatchesPlayed;
   int arenaVictories;
   int arenaDefeats;
+  int arenaCurrentWinStreak;
+  int arenaBestWinStreak;
+  final List<String> arenaMatchHistory;
   bool soundEnabled,
       musicEnabled,
       autoAttack,
@@ -43,6 +46,9 @@ class SaveData {
     this.arenaMatchesPlayed = 0,
     this.arenaVictories = 0,
     this.arenaDefeats = 0,
+    this.arenaCurrentWinStreak = 0,
+    this.arenaBestWinStreak = 0,
+    List<String>? arenaMatchHistory,
     Map<String, int>? levelStars,
     Map<String, int>? levelScores,
     Map<String, int>? keyBindings,
@@ -50,7 +56,8 @@ class SaveData {
   }) : levelStars = levelStars ?? {},
        levelScores = levelScores ?? {},
        keyBindings = {...defaultKeyBindings, ...?keyBindings},
-       tutorialHintsSeen = tutorialHintsSeen ?? {};
+       tutorialHintsSeen = tutorialHintsSeen ?? {},
+       arenaMatchHistory = arenaMatchHistory ?? [];
 
   static Map<String, int> get defaultKeyBindings => {
     'moveUp': LogicalKeyboardKey.keyW.keyId,
@@ -75,6 +82,9 @@ class SaveData {
     'arenaMatchesPlayed': arenaMatchesPlayed,
     'arenaVictories': arenaVictories,
     'arenaDefeats': arenaDefeats,
+    'arenaCurrentWinStreak': arenaCurrentWinStreak,
+    'arenaBestWinStreak': arenaBestWinStreak,
+    'arenaMatchHistory': arenaMatchHistory,
     'soundEnabled': soundEnabled,
     'musicEnabled': musicEnabled,
     'soundVolume': soundVolume,
@@ -121,6 +131,17 @@ class SaveData {
       return value.whereType<String>().toSet();
     }
 
+    List<String> stringList(String k) {
+      final value = json[k];
+      if (value is! List) return [];
+
+      return value
+          .whereType<String>()
+          .where((item) => item == 'victoria' || item == 'derrota')
+          .take(5)
+          .toList();
+    }
+
     return SaveData(
       highScore: integer('highScore'),
       totalKills: integer('totalKills'),
@@ -131,6 +152,9 @@ class SaveData {
       arenaMatchesPlayed: integer('arenaMatchesPlayed'),
       arenaVictories: integer('arenaVictories'),
       arenaDefeats: integer('arenaDefeats'),
+      arenaCurrentWinStreak: integer('arenaCurrentWinStreak'),
+      arenaBestWinStreak: integer('arenaBestWinStreak'),
+      arenaMatchHistory: stringList('arenaMatchHistory'),
       soundEnabled: boolean('soundEnabled', true),
       musicEnabled: boolean('musicEnabled', true),
       soundVolume: decimal('soundVolume', .7, 0, 1),
@@ -205,8 +229,21 @@ class SaveSystem {
 
     if (victory) {
       _data.arenaVictories++;
+      _data.arenaCurrentWinStreak++;
+
+      _data.arenaBestWinStreak = math.max(
+        _data.arenaBestWinStreak,
+        _data.arenaCurrentWinStreak,
+      );
     } else {
       _data.arenaDefeats++;
+      _data.arenaCurrentWinStreak = 0;
+    }
+
+    _data.arenaMatchHistory.insert(0, victory ? 'victoria' : 'derrota');
+
+    if (_data.arenaMatchHistory.length > 5) {
+      _data.arenaMatchHistory.removeRange(5, _data.arenaMatchHistory.length);
     }
 
     save();
